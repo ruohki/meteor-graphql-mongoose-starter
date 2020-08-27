@@ -3,7 +3,7 @@ import { Accounts } from 'meteor/accounts-base'
 
 import { Resolver, Query, Arg, Mutation, Ctx, Authorized } from "type-graphql";
 import { User, Users } from "../../mongo/user.model";
-import { ChangeUsernameInput, CreateUserInput, LoginUserInput, VerifyEmailInput } from '../classes/user.inputTypes';
+import { ChangeUsernameInput, CreateUserInput, EmailInput, LoginUserInput, VerifyEmailInput } from '../classes/user.inputTypes';
 
 @Resolver()
 export class UserResolver {
@@ -53,7 +53,7 @@ export class UserResolver {
   async logoutAllDevices(@Ctx("user") user: DocumentType<User>): Promise<boolean> {
     return !!(await user.revokeAllTokens());
   }
-
+/* 
   @Mutation(() => Boolean)
   async verifyEmail(@Arg("input") input: VerifyEmailInput): Promise<boolean> {
     return new Promise(resolve => {
@@ -62,11 +62,20 @@ export class UserResolver {
         resolve(true)
       })
     })
-  }
+  } */
 
   @Mutation(() => Boolean)
   @Authorized()
   async changeUsername(@Arg("input") input: ChangeUsernameInput, @Ctx("user") user: DocumentType<User>): Promise<Boolean> {
     return user.changeUsername(input.username);
   }
+
+  @Mutation(() => Boolean)
+  @Authorized()
+  async sendVerificationEmail(@Arg("input") input: EmailInput, @Ctx("user") user: DocumentType<User>): Promise<boolean> {
+    console.log(user._id, input.email)
+    Accounts.sendVerificationEmail(user._id, input.email)
+    return true;
+  }
+  
 }
