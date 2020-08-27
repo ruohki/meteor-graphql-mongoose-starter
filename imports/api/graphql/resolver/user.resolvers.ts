@@ -3,7 +3,7 @@ import { Accounts } from 'meteor/accounts-base'
 
 import { Resolver, Query, Arg, Mutation, Ctx, Authorized } from "type-graphql";
 import { User, Users } from "../../mongo/user.model";
-import { CreateUserInput, LoginUserInput } from '../classes/user.inputTypes';
+import { ChangeUsernameInput, CreateUserInput, LoginUserInput, VerifyEmailInput } from '../classes/user.inputTypes';
 
 @Resolver()
 export class UserResolver {
@@ -14,11 +14,11 @@ export class UserResolver {
   }
 
   @Mutation(() => User, { nullable: true })
-  async createUser(@Arg("user") user: CreateUserInput): Promise<User | null> {
+  async createUser(@Arg("input") input: CreateUserInput): Promise<User | null> {
     const result = Accounts.createUser({
-      username: user.username,
-      password: user.password,
-      email: user.email
+      username: input.username,
+      password: input.password,
+      email: input.email
     })
 
     return Users.findById(result)
@@ -26,7 +26,7 @@ export class UserResolver {
   
 
   @Mutation(() => String, { nullable: true })
-  async loginUser(@Arg("credentials") credentials: LoginUserInput): Promise<String | null> {
+  async loginUser(@Arg("input") credentials: LoginUserInput): Promise<String | null> {
     const user = await Users.findOne({ $or: [
       {
         username: credentials.username
@@ -52,5 +52,21 @@ export class UserResolver {
   @Authorized()
   async logoutAllDevices(@Ctx("user") user: DocumentType<User>): Promise<boolean> {
     return !!(await user.revokeAllTokens());
+  }
+
+  @Mutation(() => Boolean)
+  async verifyEmail(@Arg("input") input: VerifyEmailInput): Promise<boolean> {
+    return new Promise(resolve => {
+      Accounts.verifyEmail(input.token, error => {
+        if (error) throw error;
+        resolve(true)
+      })
+    })
+  }
+
+  @Mutation(() => Boolean)
+  @Authorized()
+  async changeUsername(@Arg("input") input: ChangeUsernameInput, @Ctx("user") user: DocumentType<User>): Promise<Boolean> {
+    return user.changeUsername(input.username);
   }
 }

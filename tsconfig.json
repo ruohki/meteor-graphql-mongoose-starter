@@ -5,7 +5,7 @@
 
     /* Basic Options */
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "commonjs",
     "lib": ["esnext", "dom"],
     "allowJs": true,
     "checkJs": false,
@@ -37,7 +37,7 @@
     "types": ["node"],
     "esModuleInterop": true,
     "preserveSymlinks": true,
-    "typeRoots": ["node_modules/@types","./types/**"],
+    "typeRoots": ["node_modules/@types","types"],
   },
   "exclude": ["./.meteor/**", "./packages/**"]
 }
