@@ -9,6 +9,7 @@ import {
 
 import { Field, ObjectType } from 'type-graphql';
 import { UserEmail, UserProfile, UserService } from '../graphql/classes/user.objectTypes';
+import { ModelType } from '@typegoose/typegoose/lib/types';
 
 @Options({
   schemaOptions: { versionKey: false },
@@ -63,6 +64,39 @@ export class User implements Meteor.User {
   public changePassword(this: DocumentType<User>, password: string, logout: boolean): boolean {
     Accounts.setPassword(this._id, password, { logout })
     return true;
+  }
+
+  public static async verifyEmail(this: ModelType<User>, token: string): Promise<boolean> {
+
+    const user = await this.findOne({
+      'services.email.verificationTokens.token': token
+    });
+
+    if (!user)
+      throw new Meteor.Error(403, "Verify email link expired");
+
+      const tokenRecord = user.services.email?.verificationTokens?.find(
+        t => t.token == token
+      );
+    if (!tokenRecord) return false
+
+    const emailsRecord = user.emails?.find(
+      e => e.address == tokenRecord.address
+    );
+
+    if (!emailsRecord) return false
+
+    return !!(await Users.updateOne({
+      _id: user._id,
+      'emails.address': tokenRecord.address
+    }, {
+      $set: { 'emails.$.verified': true },
+      $pull: {
+        'services.email.verificationTokens': {
+          address: tokenRecord.address
+        }
+      }
+    }));
   }
 }
 

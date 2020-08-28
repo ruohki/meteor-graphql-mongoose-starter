@@ -33,6 +33,29 @@ export class UserLoginToken {
 }
 
 @ObjectType()
+export class UserEmailVerficationToken {
+  @Property()
+  @Field()
+  token: string
+
+  @Property()
+  @IsEmail()
+  @Field()
+  address: string
+
+  @Property()
+  @Field()
+  when: Date
+}
+
+@ObjectType()
+export class UserEmailService {
+  @Property({ default: [], _id: false, type: UserEmailVerficationToken })
+  @Field(() => [UserEmailVerficationToken] ,{ defaultValue: []})
+  verificationTokens?: UserEmailVerficationToken[]
+}
+
+@ObjectType()
 export class UserResumeService {
   @Property({ _id: false, type: UserLoginToken })
   @Field(() => [UserLoginToken], { nullable: true })
@@ -48,6 +71,11 @@ export class UserService {
   @Property({ type: UserResumeService })
   @Field(() => UserResumeService)
   resume: UserResumeService
+
+  // TODO: restrict access to admins only
+  @Property({ type: UserEmailService })
+  @Field(() => UserEmailService)
+  email: UserEmailService
 }
 
 @ObjectType()
@@ -61,3 +89,4 @@ export class UserEmail {
   @Field()
   verified: boolean
 }
+

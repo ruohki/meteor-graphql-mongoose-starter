@@ -53,16 +53,11 @@ export class UserResolver {
   async logoutAllDevices(@Ctx("user") user: DocumentType<User>): Promise<boolean> {
     return !!(await user.revokeAllTokens());
   }
-/* 
+  
   @Mutation(() => Boolean)
   async verifyEmail(@Arg("input") input: VerifyEmailInput): Promise<boolean> {
-    return new Promise(resolve => {
-      Accounts.verifyEmail(input.token, error => {
-        if (error) throw error;
-        resolve(true)
-      })
-    })
-  } */
+    return Users.verifyEmail(input.token);
+  }
 
   @Mutation(() => Boolean)
   @Authorized()
@@ -73,7 +68,6 @@ export class UserResolver {
   @Mutation(() => Boolean)
   @Authorized()
   async sendVerificationEmail(@Arg("input") input: EmailInput, @Ctx("user") user: DocumentType<User>): Promise<boolean> {
-    console.log(user._id, input.email)
     Accounts.sendVerificationEmail(user._id, input.email)
     return true;
   }
