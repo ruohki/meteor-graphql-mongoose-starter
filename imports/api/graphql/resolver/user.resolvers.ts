@@ -2,9 +2,26 @@ import { DocumentType } from '@typegoose/typegoose';
 import { Accounts } from 'meteor/accounts-base'
 import { Meteor } from 'meteor/meteor';
 
-import { Resolver, Query, Arg, Mutation, Ctx, Authorized } from "type-graphql";
+import { Resolver, Query, Arg, Mutation, Ctx, Authorized, Field, ObjectType, ID } from "type-graphql";
 import { User, Users } from "../../mongo/user.model";
 import { ChangePasswordInput, ChangeUsernameInput, CreateUserInput, EmailInput, LoginUserInput, ResetPasswordInput, VerifyEmailInput } from '../classes/user.inputTypes';
+
+@ObjectType()
+export class Notification {
+  @Field(() => ID)
+  id: number;
+
+  @Field({ nullable: true })
+  message?: string;
+
+  @Field(() => Date)
+  date: Date;
+}
+
+export interface NotificationPayload {
+  id: number;
+  message?: string;
+}
 
 @Resolver()
 export class UserResolver {

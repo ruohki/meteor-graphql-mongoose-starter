@@ -3,7 +3,7 @@ import { check } from 'meteor/check'
 import { DocumentType } from '@typegoose/typegoose'
 import { User, Users } from '../../mongo/user.model'
 
-export const getUser = async (loginToken: string, agent: string): Promise<DocumentType<User> | undefined > => {
+export const getUser = async (loginToken: string): Promise<DocumentType<User> | undefined > => {
   if (loginToken) {
     check(loginToken, String)
 
@@ -24,17 +24,7 @@ export const getUser = async (loginToken: string, agent: string): Promise<Docume
         const expiresAt = Accounts._tokenExpiration(tokenInformation.when)
         const isExpired = expiresAt < new Date()
   
-        if (!isExpired) {
-          // Addition if not expired update the agent string
-          user.services.resume.loginTokens?.map(tokenInfo => {
-            if (tokenInfo.hashedToken === hashedToken && tokenInfo.agent !== agent) {
-              tokenInfo.agent = agent;
-              user.save();
-            }
-          })
-
-          return user
-        }
+        if (!isExpired) return user
       }
     }
   }
