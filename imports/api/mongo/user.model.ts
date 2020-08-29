@@ -10,6 +10,7 @@ import {
 import { Field, ObjectType } from 'type-graphql';
 import { UserEmail, UserProfile, UserService } from '../graphql/classes/user.objectTypes';
 import { ModelType } from '@typegoose/typegoose/lib/types';
+import { WhatIsIt } from '@typegoose/typegoose/lib/internal/constants';
 
 @Options({
   schemaOptions: { versionKey: false },
@@ -29,7 +30,7 @@ export class User implements Meteor.User {
   @Field({ nullable: true })
   username?: string
   
-  @Property({ _id: false, type: UserEmail })
+  @Property({ _id: false, type: UserEmail }, WhatIsIt.ARRAY)
   @Field(() => [UserEmail], { nullable: true })
   emails?: UserEmail[]
   
@@ -51,9 +52,21 @@ export class User implements Meteor.User {
     return true;
   }
 
-  public addEmail(this: DocumentType<User>, email: string, verified: boolean): boolean {
+  public async addEmail(this: DocumentType<User>, email: string, verified: boolean): Promise<boolean> {
+    const users = await Users.find({
+      'emails': {
+        $elemMatch: {
+          "address": email,
+          "verified": true
+        }
+      }
+    });
+
+    if (users.length > 0) return false;
+   
     Accounts.addEmail(this._id, email, verified)
     return true;
+    
   }
 
   public changeUsername(this: DocumentType<User>, username: string): boolean {
@@ -61,23 +74,38 @@ export class User implements Meteor.User {
     return true;
   }
 
-  public changePassword(this: DocumentType<User>, password: string, logout: boolean): boolean {
-    Accounts.setPassword(this._id, password, { logout })
+  public changePassword(this: DocumentType<User>, oldPassword: string, newPassword: string, logout: boolean): boolean {
+    const { error } = Accounts._checkPassword(this, oldPassword);
+    if (error) throw error
+    Accounts.setPassword(this._id, newPassword, { logout })
     return true;
   }
 
-  public static async verifyEmail(this: ModelType<User>, token: string): Promise<boolean> {
+  public static async resetPassword(this: ModelType<User>, token: string, password: string): Promise<boolean> {
+    const user = await Users.findOne({"services.password.reset.token": token});
+    if (!user) return false;
 
+    ;
+    if (user.services?.password?.reset?.reason !== "reset") return false;
+
+    Accounts.setPassword(user._id, password, { logout: true })
+    return !!(await Users.updateOne({
+      _id: user._id,
+    }, {
+      $unset: { 'services.password.reset': "" },
+    }));
+  }
+
+  public static async verifyEmail(this: ModelType<User>, token: string): Promise<boolean> {
     const user = await this.findOne({
       'services.email.verificationTokens.token': token
     });
 
-    if (!user)
-      throw new Meteor.Error(403, "Verify email link expired");
-
-      const tokenRecord = user.services.email?.verificationTokens?.find(
-        t => t.token == token
-      );
+    if (!user) throw new Meteor.Error(403, "Verify email link expired");
+    const tokenRecord = user.services.email?.verificationTokens?.find(
+      t => t.token == token
+    );
+    
     if (!tokenRecord) return false
 
     const emailsRecord = user.emails?.find(

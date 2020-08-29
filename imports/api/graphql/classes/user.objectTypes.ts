@@ -3,10 +3,34 @@ import { IsEmail, IsUrl } from 'class-validator';
 import { Field, ObjectType } from 'type-graphql';
 
 @ObjectType()
+export class UserResetPassword {
+  @Property()
+  @Field()
+  token: string
+
+  @Property()
+  @Field()
+  @IsEmail()
+  email: string
+
+  @Property()
+  @Field()
+  when: Date
+
+  @Property()
+  @Field()
+  reason: string
+}
+
+@ObjectType()
 export class UserPasswordService {
   @Property()
   @Field()
   bcrypt?: string
+
+  @Property()
+  @Field(() => UserResetPassword, { nullable: true })
+  reset?: UserResetPassword
 }
 
 @ObjectType()
@@ -89,4 +113,3 @@ export class UserEmail {
   @Field()
   verified: boolean
 }
-

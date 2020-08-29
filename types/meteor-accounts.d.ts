@@ -27,7 +27,12 @@ declare module "meteor/accounts-base" {
     function _generateStampedLoginToken(): stampedLoginToken;
     function _insertLoginToken(userId: string, token: stampedLoginToken): void;
     function _tokenExpiration(when: Date): Date
+    function _getPasswordResetTokenLifetimeMs(): number
+    function _getPasswordEnrollTokenLifetimeMs(): number
+    
     function validateLoginAttempt( func: (options: LoginOptions) => boolean ): void;
     function onLogin( func: (options: LoginOptions) => boolean ): void;
+
+  
   }
 }

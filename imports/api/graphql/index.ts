@@ -1,22 +1,22 @@
+import { WebApp } from 'meteor/webapp';
+import { Meteor } from 'meteor/meteor';
+
 import mongoose from 'mongoose';
 
 import { ApolloServer } from 'apollo-server-express';
 import { ExpressContext } from 'apollo-server-express/dist/ApolloServer';
-
 import { buildSchema } from 'type-graphql';
+import { PubSub as ApolloPubSub } from 'apollo-server-express';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import * as Redis from 'ioredis'
+
 import { ObjectId } from "mongodb";
-
-//import { DocumentType } from '@typegoose/typegoose';
 import { TypegooseMiddleware } from './helper/typegooseMiddleware';
-
 import { ObjectIdScalar } from './helper/scalarObjectID';
+import { getUser } from './helper/getUser';
+import { authChecker } from './helper/authChecker';
 
 import { UserResolver } from './resolver/user.resolvers';
-
-import { getUser } from './helper/getUser';
-import { WebApp } from 'meteor/webapp';
-import { Meteor } from 'meteor/meteor';
-import { authChecker } from './helper/authChecker';
 
 export interface GraphqlContext {
   userId?: string | null
@@ -26,21 +26,37 @@ export interface GraphqlContext {
 export const createMongoConnection = async (): Promise<typeof mongoose> => {
   const mongoUrl = process.env.MONGO_URL ?? "mongodb://localhost:3001/meteor"
   
-  return mongoose.connect(mongoUrl, {
+  const mongo = await mongoose.connect(mongoUrl, {
     useUnifiedTopology: true,
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false
   })
+
+  //mongo.set("debug", true);
+  return mongo;
 }
+
+const createRedisPubSub = (redisUrl: string) => {
+  return new RedisPubSub({
+    publisher: new Redis.default(redisUrl),
+    subscriber: new Redis.default(redisUrl)
+  });
+}
+
+const createApolloPubSub = () => new ApolloPubSub()
 
 export const createApolloServer = async () => {
   await createMongoConnection();
+
+  const useRedis: string | boolean = process.env?.REDIS_URL ?? false
+  const pubSub = useRedis ? createRedisPubSub(useRedis) : createApolloPubSub();
 
   const schema = await buildSchema({
     resolvers: [
       UserResolver
     ],
+    pubSub,
     authChecker,
     //@ts-ignore
     scalarsMap: [{ type: ObjectId, scalar: ObjectIdScalar }],
@@ -65,6 +81,8 @@ export const createApolloServer = async () => {
       } : { }
     },
   });
+  
+  server.installSubscriptionHandlers(WebApp.httpServer)
   
   //@ts-ignore
   server.applyMiddleware({

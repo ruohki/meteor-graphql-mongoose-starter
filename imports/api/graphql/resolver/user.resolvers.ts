@@ -1,9 +1,10 @@
 import { DocumentType } from '@typegoose/typegoose';
 import { Accounts } from 'meteor/accounts-base'
+import { Meteor } from 'meteor/meteor';
 
 import { Resolver, Query, Arg, Mutation, Ctx, Authorized } from "type-graphql";
 import { User, Users } from "../../mongo/user.model";
-import { ChangeUsernameInput, CreateUserInput, EmailInput, LoginUserInput, VerifyEmailInput } from '../classes/user.inputTypes';
+import { ChangePasswordInput, ChangeUsernameInput, CreateUserInput, EmailInput, LoginUserInput, ResetPasswordInput, VerifyEmailInput } from '../classes/user.inputTypes';
 
 @Resolver()
 export class UserResolver {
@@ -24,7 +25,6 @@ export class UserResolver {
     return Users.findById(result)
   }
   
-
   @Mutation(() => String, { nullable: true })
   async loginUser(@Arg("input") credentials: LoginUserInput): Promise<String | null> {
     const user = await Users.findOne({ $or: [
@@ -56,13 +56,20 @@ export class UserResolver {
   
   @Mutation(() => Boolean)
   async verifyEmail(@Arg("input") input: VerifyEmailInput): Promise<boolean> {
-    return Users.verifyEmail(input.token);
+    if (!await Users.verifyEmail(input.token)) throw new Meteor.Error(403, "Verify email link expired");
+    return true;
   }
 
   @Mutation(() => Boolean)
   @Authorized()
-  async changeUsername(@Arg("input") input: ChangeUsernameInput, @Ctx("user") user: DocumentType<User>): Promise<Boolean> {
+  async changeUsername(@Arg("input") input: ChangeUsernameInput, @Ctx("user") user: DocumentType<User>): Promise<boolean> {
     return user.changeUsername(input.username);
+  }
+
+  @Mutation(() => Boolean)
+  @Authorized()
+  async changePassword(@Arg("input") input: ChangePasswordInput, @Ctx("user") user: DocumentType<User>): Promise<boolean> {
+    return user.changePassword(input.oldPassword, input.newPassword, false);
   }
 
   @Mutation(() => Boolean)
@@ -72,4 +79,30 @@ export class UserResolver {
     return true;
   }
   
+  @Mutation(() => Boolean)
+  async sendResetPasswordEmail(@Arg("input") input: EmailInput): Promise<boolean> {
+    const user = await Users.findOne({
+      'emails.address': input.email
+    });
+
+    if (!user) return true;
+    Accounts.sendResetPasswordEmail(user._id, input.email);
+
+    return true;
+  }
+
+  @Mutation(() => Boolean)
+  async resetPassword(@Arg("input") input: ResetPasswordInput): Promise<boolean> {
+    if (!await Users.resetPassword(input.token, input.newPassword)) throw new Meteor.Error(403, "Token expired");
+    return true;
+  }
+
+  @Mutation(() => Boolean)
+  @Authorized()
+  async addEmail(@Arg("input") input: EmailInput, @Ctx("user") user: DocumentType<User>): Promise<boolean> {
+    if (!await user.addEmail(input.email, false)) throw new Meteor.Error("Email already verified with another user.");
+    
+    Accounts.sendVerificationEmail(user._id, input.email);
+    return true;
+  }
 }

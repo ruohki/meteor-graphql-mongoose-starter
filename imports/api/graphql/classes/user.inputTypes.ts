@@ -36,6 +36,17 @@ export class VerifyEmailInput {
 }
 
 @InputType()
+export class ResetPasswordInput {
+  @Field()
+  token: string
+
+  @Field()
+  @Length(5)
+  @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {message: 'password too weak'})
+  newPassword: string
+}
+
+@InputType()
 export class ChangeUsernameInput {
   @Field()
   @Length(5)
@@ -47,7 +58,12 @@ export class ChangePasswordInput {
   @Field()
   @Length(5)
   @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {message: 'password too weak'})
-  password: string;
+  oldPassword: string;
+
+  @Field()
+  @Length(5)
+  @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {message: 'password too weak'})
+  newPassword: string;
 }
 
 @InputType()
