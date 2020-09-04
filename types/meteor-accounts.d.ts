@@ -23,6 +23,7 @@ declare module "meteor/accounts-base" {
   }
 
   module Accounts {
+    function _storedLoginToken(): string | undefined;
     function _hashLoginToken(token: string): string;
     function _generateStampedLoginToken(): stampedLoginToken;
     function _insertLoginToken(userId: string, token: stampedLoginToken): void;

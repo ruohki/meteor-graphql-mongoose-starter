@@ -74,10 +74,8 @@ export const createApolloServer = async () => {
   const server = new ApolloServer({
     schema: schema,
     playground: true,
-    tracing: true,
     context: async (context: ExpressContext): Promise<GraphqlContext> => {
-      if (!context?.req?.headers) return {};
-      if (!context?.req?.headers.authorization) return {};
+      if (!context?.req?.headers?.authorization) return {};
 
       const { authorization } = context.req.headers;
       const user = await getUser(authorization);
